@@ -3,95 +3,282 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>US Race Demographics Explorer</title>
-  <!-- D3 / TopoJSON / SheetJS -->
+  <title>Sabio & App Science – 2026 Senate Election Insights</title>
+  <!-- External libs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3" defer></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
+
+  <!-- Avenir fallback via system fonts -->
   <style>
-    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f7fa;color:#333}
-    #loginOverlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999}
-    #loginBox{background:#fff;padding:2rem 3rem;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.4);width:320px}
-    #loginBox h2{margin-top:0;text-align:center}
-    #loginBox input[type=password]{width:100%;padding:.75rem;font-size:1rem;border:1px solid #ccc;border-radius:8px;margin:1rem 0}
-    #loginBox button{width:100%;padding:.75rem;font-size:1rem;border:none;border-radius:8px;background:#0066cc;color:#fff;cursor:pointer}
-    #map{position:relative;width:100%;height:80vh;cursor:default}
+    @font-face {
+      font-family: "Avenir";
+      src: local("Avenir"), local("Avenir Next"), local("Avenir Next LT Pro");
+      font-style: normal;
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: "Avenir";
+      src: local("Avenir Heavy"), local("Avenir Next Demi Bold"), local("Avenir Next LT Pro Demi"), local("Avenir Next LT Pro Bold");
+      font-style: normal;
+      font-weight: 300;
+    }
+    :root{
+      --bg-dark:#1a1a1a;
+      --bg-dark-alt:#222;
+      --accent:#ff6d00;
+      --text-light:#f5f5f5;
+      --text-mid:#c3c3c3;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Avenir','Avenir Next','Segoe UI',sans-serif;
+      background-color:var(--bg-dark);
+      color:var(--text-light);
+
+
+    
+
+    }
+
+    .background-layer {
+  position: relative;
+  z-index: 0;
+}
+.background-layer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('https://cdn.prod.website-files.com/620c2f2af62451ad0ec2016d/624e3e5155be3a125029d626_dots.svg');
+  background-repeat: repeat;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: -1;
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2rem;
+  justify-content: center;
+  padding-bottom: 2rem;
+}
+.info-card {
+  background: #121212;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-light);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  position: relative;
+}
+.info-card:hover {
+  box-shadow: 0 0 18px rgba(255, 109, 0, 0.4);
+  transform: translateY(-4px);
+}
+.card-icon {
+  height: 42px;
+  margin-bottom: 1rem;
+  opacity: 0.85;
+}
+.info-card h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--accent);
+}
+.info-card p {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-mid);
+}
+
+
+    a{color:var(--accent);text-decoration:none}
+    h1,h2,h3,h4{font-weight:300;font-family:'Avenir','Avenir Next',sans-serif;}
+    h2{color:var(--accent);margin-bottom:.5rem}
+    section{padding:3.5rem 6vw;max-width:1200px;margin:auto;font-family:'Avenir','Avenir Next',sans-serif;}
+
+    #logo{
+      height:42px;
+      width:auto;
+    }
+    header{
+      display:flex;
+      align-items:center;
+      gap:1rem;
+      background:var(--bg-dark-alt);
+      padding:1.25rem 6vw;
+      box-shadow:0 2px 6px rgba(0,0,0,.45);
+      position:sticky;
+      top:0;
+      z-index:100;
+      font-family:'Avenir','Avenir Next',sans-serif;
+    }
+    header img#logo{
+      height:42px;
+      width:auto;
+    }
+    header h1{
+      font-size:1.4rem;
+      letter-spacing:.02em;
+      font-weight:700;
+    }
+
+    #hero{padding-top:4rem}
+    #map{height:100%}
+    #mapWrapper{position:relative;width:100%;height:78vh;border:1px solid var(--accent);border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.45)}
     svg{width:100%;height:100%}
-    .state{fill:#cfd8e3;stroke:#fff;stroke-width:1;transition:fill .15s}
-    .state:hover{fill:#99b2cc;cursor:pointer}
-    #tooltip{position:absolute;pointer-events:none;background:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.25);padding:1rem 1.25rem;font-size:.9rem;line-height:1.4;min-width:240px;max-width:280px;display:none;z-index:10}
-    #tooltip h3{margin:0 0 .25rem;font-size:1rem}
-    #tooltip h4{margin:.5rem 0 .25rem;font-size:.85rem;color:#0066cc}
-    .raceBar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:.25rem 0 .5rem}
+    .state{fill:#353535;stroke:#555;stroke-width:.6;transition:fill .15s}
+    .state:hover{fill:#555;cursor:pointer}
+
+    #tooltip{position:absolute;pointer-events:none;background:#fff;color:#000;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.35);padding:1rem 1.25rem;font-family:'Avenir','Avenir Next',sans-serif;font-size:.85rem;line-height:1.35;min-width:240px;max-width:280px;display:none;z-index:20}
+    #tooltip h3{margin:0 0 .25rem;font-size:1rem;color:#111;font-weight:700}
+    #tooltip h4{margin:.45rem 0 .25rem;font-size:.8rem;color:var(--accent);font-weight:700}
+    .raceBar{display:flex;height:7px;border-radius:4px;overflow:hidden;margin:.2rem 0 .45rem}
     .raceBar div{height:100%}
+    .legend{font-size:.7rem;color:#444;margin-top:-.25rem}
+
+    .textBlock{color:var(--text-mid);max-width:800px;font-weight:400;font-family:'Avenir','Avenir Next',sans-serif;}
+    footer{background:var(--bg-dark-alt);padding:1rem 0;text-align:center;font-size:.75rem;color:var(--text-mid);font-family:'Avenir','Avenir Next',sans-serif;}
+
+    #loginOverlay{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:'Avenir','Avenir Next',sans-serif;}
+    #loginBox{background:#fff;padding:2rem 3rem;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.55);width:340px;text-align:center;color:#000;font-family:'Avenir','Avenir Next',sans-serif;}
+    #loginBox input{width:100%;padding:.8rem;font-size:1rem;border:1px solid #ccc;border-radius:8px;margin:1rem 0}
+    #loginBox button{width:100%;padding:.8rem;font-size:1rem;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;font-weight:700;font-family:'Avenir','Avenir Next',sans-serif;}
   </style>
 </head>
 <body>
   <!-- Password Gate -->
-  <div id="loginOverlay"><div id="loginBox"><h2>Please enter password</h2><input type="password" id="passwordInput" placeholder="Password" /><button id="loginBtn">Enter</button><p id="loginError" style="color:red;display:none;text-align:center">Incorrect password</p></div></div>
-  <!-- Map & Tooltip -->
-  <div id="map"></div>
-  <div id="tooltip"></div>
+  <div id="loginOverlay">
+    <div id="loginBox">
+      <h2>Protected Site</h2>
+      <p style="font-size:.9rem">Enter password to view insights</p>
+      <input type="password" id="passwordInput" placeholder="Password" />
+      <button id="loginBtn">Enter</button>
+      <p id="loginError" style="color:#c00;display:none;font-size:.85rem;margin-top:.75rem">Incorrect password</p>
+    </div>
+  </div>
+
+  <!-- Site Header -->
+  <header>
+    <img id="logo" src="./assets/logo.png" alt="App Science & Sabio">
+    <h1>Sabio &amp; App Science 2026 Senate Election Insights</h1>
+  </header>
+
+  <!-- Map Hero Section -->
+  <section id="hero">
+    <h2>State‑By‑State CTV App Science Insights</h2>
+    <div id="mapWrapper"><div id="map"></div><div id="tooltip"></div></div>
+  </section>
+
+
+<!-- Wrapped content below map -->
+<div class="background-layer">
+  <section id="about-section">
+    <h2 style="text-align:center;margin-bottom:2rem">About</h2>
+    <div class="card-grid">
+      <div class="info-card">
+        <img src="./assets/app-sci-logo.png" alt="App Science Logo" class="card-icon">
+        <h3>App Science</h3>
+        <p>App Science® stands alone by taking a mobile-first approach to advanced cross-platform analytics with our Proprietary 80MM People-Based Household Graph – to provide brands and platforms audience measurement solutions that empower confidence for advertising transactions and outcomes.</p>
+      </div>
+      <div class="info-card">
+        <img src="./assets/sabio-logo.png" alt="Sabio Logo" class="card-icon">
+        <h3>Sabio</h3>
+        <p>CTV Ad Solutions for a Diverse Mass Market. Sabio is a leading CTV advertising platform built to help brands reach, engage, and validate (REV) streaming audiences.</p>
+      </div>
+      <div class="info-card">
+        <!--img src="logo-placeholder.png" alt="CTV Icon" class="card-icon"-->
+        <h3>CTV Advertising</h3>
+        <p>CTV delivers internet-based streaming content on Smart TVs and offers advanced ad targeting. With $30B in ad spend in 2024, it's set to surpass linear TV by 2026.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="data-sources">
+    <h2>Data Sources</h2>
+    <p class="textBlock">This site was built using a combination of publicly available data and proprietary data provided by Sabio and App Science. Data marked as Census was taken from the 2023 American Community Survey (ACS). The majority of all other insights come from App Science’s measurement and audience graph.</p>
+  </section>
+
+
+</div>
+
+  <footer>&copy; 2025 Sabio Holdings &amp; App Science. All rights reserved.</footer>
 
 <script defer>
 (function(){
   const HASHED="d3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791"; // sha256("demo123")
-  async function verify(pass){const enc=new TextEncoder().encode(pass);const hash=await crypto.subtle.digest("SHA-256",enc);return[...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,"0")).join("")===HASHED;}
-  const loginBtn=document.getElementById('loginBtn');
-  loginBtn.addEventListener('click',async()=>{const pass=document.getElementById('passwordInput').value;if(await verify(pass)){document.getElementById('loginOverlay').style.display='none';initApp();}else{document.getElementById('loginError').style.display='block';}});
-  document.getElementById('passwordInput').addEventListener('keyup',e=>{if(e.key==='Enter')loginBtn.click();});
+  async function sha256(s){const buf=new TextEncoder().encode(s);const hash=await crypto.subtle.digest('SHA-256',buf);return[...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');}
 
-  function initApp(){
-    if(typeof XLSX==='undefined'){showFatal('SheetJS failed to load – check CDN.');return;}
+  const loginBtn=document.getElementById('loginBtn');
+  loginBtn.addEventListener('click',attemptLogin);
+  document.getElementById('passwordInput').addEventListener('keyup',e=>{if(e.key==='Enter')attemptLogin();});
+
+  async function attemptLogin(){
+    const pass=document.getElementById('passwordInput').value;
+    if(await sha256(pass)===HASHED){document.getElementById('loginOverlay').style.display='none';initSite();}
+    else document.getElementById('loginError').style.display='block';
+  }
+
+  function initSite(){
+    if(typeof XLSX==='undefined'){fatal('SheetJS failed to load.');return;}
     Promise.all([
       d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json'),
-      fetch('us_state_race_sample.xlsx').then(r=>{if(!r.ok)throw new Error('Excel file not found next to HTML');return r.arrayBuffer();})
+      fetch('us_state_race_sample.xlsx').then(r=>{if(!r.ok)throw new Error('Data file missing (us_state_race_sample.xlsx)');return r.arrayBuffer();})
     ])
     .then(([us,buf])=>{
       const wb=XLSX.read(buf,{type:'array'});const sheet=wb.Sheets[wb.SheetNames[0]];const data=XLSX.utils.sheet_to_json(sheet);
       const stateData=d3.group(data,d=>d.State);
-      drawMap(us,stateData);
+      renderMap(us,stateData);
     })
-    .catch(err=>showFatal(err.message));
+    .catch(err=>fatal(err.message));
   }
 
-  function drawMap(us,stateData){
+  function fatal(msg){document.getElementById('map').innerHTML=`<p style="color:#c33;padding:2rem;text-align:center">${msg}</p>`;}
+
+  function renderMap(us,stateData){
     const mapEl=document.getElementById('map');
     const svg=d3.select(mapEl).append('svg');
-    const width=mapEl.clientWidth;const height=mapEl.clientHeight;
+    const width=mapEl.clientWidth, height=mapEl.clientHeight;
     svg.attr('viewBox',`0 0 ${width} ${height}`);
     const projection=d3.geoAlbersUsa().translate([width/2,height/2]).scale(width*1.25);
     const path=d3.geoPath(projection);
     const states=topojson.feature(us,us.objects.states).features;
-
     const tooltip=document.getElementById('tooltip');
 
-    function hideTooltip(){tooltip.style.display='none';}
-    svg.on('click',hideTooltip);
-
+    svg.on('click',()=>tooltip.style.display='none');
     svg.selectAll('path').data(states).enter().append('path')
       .attr('class','state')
       .attr('d',path)
       .on('click',(event,d)=>{
-        event.stopPropagation(); // keep map click from hiding tooltip instantly
-        const rows=stateData.get(d.properties.name)||[];
-        if(!rows.length){tooltip.innerHTML=`<h3>${d.properties.name}</h3><p>No data available.</p>`;}
-        else{
-          let html=`<h3>${d.properties.name}</h3>`;
-          rows.forEach(r=>{
-            html+=`<h4>${r.Year}</h4><strong>Total:</strong> ${Number(r.TotalPopulation).toLocaleString()}<div class=raceBar><div style=\"width:${r['White%']}%;background:#dfe6f9\"></div><div style=\"width:${r['Black%']}%;background:#a6bce5\"></div><div style=\"width:${r['Asian%']}%;background:#5f8dd3\"></div><div style=\"width:${r['Native%']}%;background:#2d5dbb\"></div><div style=\"width:${r['Hispanic%']}%;background:#173d99\"></div></div><small style=\"font-size:.75rem\">W B A N H&nbsp;&nbsp;</small><br><strong>Culture:</strong> ${r.CulturalAffinities}`;});
-          tooltip.innerHTML=html;
-        }
-        const [mx,my]=d3.pointer(event,mapEl);
-        const tWidth=tooltip.offsetWidth||280;
-        const tHeight=tooltip.offsetHeight||200;
-        let left=mx+15;let top=my-tHeight/2;
-        if(left+tWidth>mapEl.clientWidth)left=mx-tWidth-15; if(top<0)top=5; if(top+tHeight>mapEl.clientHeight)top=mapEl.clientHeight-tHeight-5;
-        tooltip.style.left=`${left}px`; tooltip.style.top=`${top}px`; tooltip.style.display='block';
+        event.stopPropagation();
+        const entries=stateData.get(d.properties.name)||[];
+        tooltip.innerHTML=generateTooltipHTML(d.properties.name,entries);
+        positionTooltip(event,mapEl,tooltip);
+        tooltip.style.display='block';
       });
   }
 
-  function showFatal(msg){const map=document.getElementById('map');map.innerHTML=`<p style=\"color:red;padding:2rem;text-align:center\">${msg}</p>`;}
+  function generateTooltipHTML(state,rows){
+    if(!rows.length) return `<h3>${state}</h3><p>No data available.</p>`;
+    let html=`<h3>${state}</h3>`;
+    rows.forEach(r=>{
+      html+=`<h4>${r.Year}</h4><strong>Total:</strong> ${Number(r.TotalPopulation).toLocaleString()}<div class=raceBar><div style=\"width:${r['White%']}%;background:#dfe6f9\"></div><div style=\"width:${r['Black%']}%;background:#a6bce5\"></div><div style=\"width:${r['Asian%']}%;background:#5f8dd3\"></div><div style=\"width:${r['Native%']}%;background:#2d5dbb\"></div><div style=\"width:${r['Hispanic%']}%;background:#173d99\"></div></div><div class=legend>W&nbsp;B&nbsp;A&nbsp;N&nbsp;H</div><strong>Culture:</strong> ${r.CulturalAffinities}`;
+    });
+    return html;
+  }
+
+  function positionTooltip(evt,container,tip){
+    const [mx,my]=d3.pointer(evt,container);
+    // Wait a tick to ensure dimensions are known
+    requestAnimationFrame(()=>{
+      const tw=tip.offsetWidth, th=tip.offsetHeight;
+      let left=mx+18, top=my-th/2;
+      if(left+tw>container.clientWidth) left=mx-tw-18;
+      if(top<8) top=8; if(top+th>container.clientHeight-8) top=container.clientHeight-th-8;
+      tip.style.left=`${left}px`; tip.style.top=`${top}px`;
+    });
+  }
 })();
 </script>
 </body>
