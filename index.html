@@ -41,6 +41,117 @@
 
     }
 
+    .state {
+  stroke: #fff;
+  stroke-width: 0.5;
+  cursor: pointer;
+  transition: fill 0.3s ease;
+}
+.state[data-race="no"]     { fill: #444; }
+.state[data-race="general"]{ fill: #888; }
+.state[data-race="battleground"] { fill: #ffb74d; }
+.state[data-race="important"]    { fill: #ff6d00; }
+.state:hover {
+  filter: brightness(1.2);
+  stroke-width: 1;
+}
+
+#mapWrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1rem;
+}
+#map {
+  flex: 1 1 70%;
+  min-height: 600px;
+}
+
+#insight-bar {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding: 1rem 6vw;
+  overflow-x: auto;
+}
+.insight-card {
+  flex: 1 1 20%;
+  min-width: 220px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 1rem;
+  color: #eee;
+  font-size: 0.85rem;
+  font-family: 'Avenir','Avenir Next','Segoe UI',sans-serif;
+  box-shadow: 0 0 6px rgba(0,0,0,0.3);
+}
+.insight-card h4 {
+  color: var(--accent);
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+.insight-entry {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #333;
+  padding: 4px 0;
+}
+.insight-entry:last-child {
+  border-bottom: none;
+}
+
+.sidebar {
+  width: 400px;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: 20px;
+  background-color: #1c1c1c;
+  border-left: 1px solid #333;
+  font-family: 'Avenir','Avenir Next','Segoe UI',sans-serif;
+  color: #eee;
+}
+.sidebar h2 {
+  margin-bottom: 15px;
+  font-size: 1.5rem;
+  border-bottom: 2px solid #444;
+  padding-bottom: 5px;
+  color: var(--accent);
+}
+.data-field {
+  margin-bottom: 20px;
+}
+.data-field label {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 5px;
+  color: #ffa347;
+}
+.data-field p {
+  margin: 0;
+  color: #ccc;
+}
+.multi-entry {
+  border: 1px solid #444;
+  border-radius: 5px;
+  padding: 8px;
+  background-color: #2a2a2a;
+}
+.entry-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid #3a3a3a;
+  color: #ddd;
+}
+.entry-item:last-child {
+  border-bottom: none;
+}
+.population-breakdown {
+  padding-left: 15px;
+  color: #bbb;
+}
     .background-layer {
   position: relative;
   z-index: 0;
@@ -125,9 +236,7 @@
     }
 
     #hero{padding-top:4rem}
-    #map{height:100%}
-    #mapWrapper{position:relative;width:100%;height:78vh;border:1px solid var(--accent);border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.45)}
-    svg{width:100%;height:100%}
+
     .state{fill:#353535;stroke:#555;stroke-width:.6;transition:fill .15s}
     .state:hover{fill:#555;cursor:pointer}
 
@@ -165,11 +274,15 @@
     <h1>Sabio &amp; App Science 2026 Senate Election Insights</h1>
   </header>
 
-  <!-- Map Hero Section -->
-  <section id="hero">
-    <h2>State‑By‑State CTV App Science Insights</h2>
-    <div id="mapWrapper"><div id="map"></div><div id="tooltip"></div></div>
-  </section>
+<!-- Map Hero Section -->
+<section id="hero">
+  <h2>State‑By‑State CTV App Science Insights</h2>
+  <div id="mapWrapper">
+    <div id="map"></div>
+    <div id="sidebar" class="sidebar"></div>
+  </div>
+  <div id="insight-bar"></div>
+</section>
 
 
 <!-- Wrapped content below map -->
@@ -205,81 +318,156 @@
 
   <footer>&copy; 2025 Sabio Holdings &amp; App Science. All rights reserved.</footer>
 
+<!-- JS Integration for Sidebar Data -->
 <script defer>
-(function(){
-  const HASHED="d3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791"; // sha256("demo123")
-  async function sha256(s){const buf=new TextEncoder().encode(s);const hash=await crypto.subtle.digest('SHA-256',buf);return[...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+  (function(){
+    const HASHED="d3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791"; // sha256("demo123")
+    async function sha256(s){const buf=new TextEncoder().encode(s);const hash=await crypto.subtle.digest('SHA-256',buf);return[...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+  
+    const loginBtn=document.getElementById('loginBtn');
+    loginBtn.addEventListener('click',attemptLogin);
+    document.getElementById('passwordInput').addEventListener('keyup',e=>{if(e.key==='Enter')attemptLogin();});
+  
+    async function attemptLogin(){
+      const pass=document.getElementById('passwordInput').value;
+      if(await sha256(pass)===HASHED){document.getElementById('loginOverlay').style.display='none';initSite();}
+      else document.getElementById('loginError').style.display='block';
+    }
+  
+    function initSite(){
+  if(typeof XLSX==='undefined'){fatal('SheetJS failed to load.');return;}
+  Promise.all([
+    d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json'),
+    fetch('2025 - Top Political Races and Data.xlsx').then(r=>{if(!r.ok)throw new Error('Data file missing');return r.arrayBuffer();})
+  ])
+  .then(([us,buf])=>{
+    const wb=XLSX.read(buf,{type:'array'});const sheet=wb.Sheets[wb.SheetNames[0]];const data=XLSX.utils.sheet_to_json(sheet,{header:1});
 
-  const loginBtn=document.getElementById('loginBtn');
-  loginBtn.addEventListener('click',attemptLogin);
-  document.getElementById('passwordInput').addEventListener('keyup',e=>{if(e.key==='Enter')attemptLogin();});
+    const headers = data[1];
+    const rows = data.slice(2);
+    const stateData = new Map();
 
-  async function attemptLogin(){
-    const pass=document.getElementById('passwordInput').value;
-    if(await sha256(pass)===HASHED){document.getElementById('loginOverlay').style.display='none';initSite();}
-    else document.getElementById('loginError').style.display='block';
-  }
+    function extractTop(row, name, start) {
+      return [
+        {Name: row[start], Data: row[start+1]},
+        {Name: row[start+3], Data: row[start+4]},
+        {Name: row[start+6], Data: row[start+7]}
+      ].filter(item => item.Name);
+    }
 
-  function initSite(){
-    if(typeof XLSX==='undefined'){fatal('SheetJS failed to load.');return;}
-    Promise.all([
-      d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json'),
-      fetch('us_state_race_sample.xlsx').then(r=>{if(!r.ok)throw new Error('Data file missing (us_state_race_sample.xlsx)');return r.arrayBuffer();})
-    ])
-    .then(([us,buf])=>{
-      const wb=XLSX.read(buf,{type:'array'});const sheet=wb.Sheets[wb.SheetNames[0]];const data=XLSX.utils.sheet_to_json(sheet);
-      const stateData=d3.group(data,d=>d.State);
-      renderMap(us,stateData);
+    rows.forEach(row => {
+      const state = row[0];
+      if (!state) return;
+      const raceType = row[2];
+      const entry = {
+        "Race Type": raceType,
+        "Race Description": row[3],
+        "Total Population": row[4],
+        "% White": row[5], "% Hispanic": row[6], "% Asian": row[7], "% African American": row[8],
+        "Narrative": row[9],
+        "Top Shows": extractTop(row, 'Top Shows', 10),
+        "Top Channels": extractTop(row, 'Top Channels', 19),
+        "Top Mobile Apps": extractTop(row, 'Top Mobile Apps', 28),
+        "Top Location Visits": extractTop(row, 'Top Location Visits', 37),
+        "Top Segments": extractTop(row, 'Top Segments', 46)
+      };
+      stateData.set(state, entry);
+    });
+
+    renderMap(us, stateData);
+  })
+  .catch(err=>fatal(err.message));
+}
+  
+    function getFillColor(raceType) {
+      if (!raceType || raceType.includes("No Race")) return "#444"; // No Race
+      if (raceType.toLowerCase().includes("battleground")) return "#ffb74d"; // Battleground
+      if (raceType.toLowerCase().includes("important")) return "#ff6d00"; // Important
+      return "#888"; // General race with limited data
+    }
+
+    function getRaceCategory(type) {
+  if (!type || type.toLowerCase().includes("no race")) return "no";
+  if (type.toLowerCase().includes("battleground")) return "battleground";
+  if (type.toLowerCase().includes("important")) return "important";
+  return "general";
+}
+  
+    function renderMap(us,stateData){
+  const mapEl=document.getElementById('map');
+  const svg=d3.select(mapEl).append('svg');
+  const width=mapEl.clientWidth, height=mapEl.clientHeight;
+  svg.attr('viewBox',`0 0 ${width} ${height}`);
+  const projection=d3.geoAlbersUsa().translate([width/2,height/2]).scale(width*1.25);
+  const path=d3.geoPath(projection);
+  const states=topojson.feature(us,us.objects.states).features;
+
+  svg.selectAll('path').data(states).enter().append('path')
+    .attr('class','state')
+    .attr('d',path)
+    .attr('data-race',d=>{
+      const state = d.properties.name;
+      const info = stateData.get(state);
+      return getRaceCategory(info?.["Race Type"]);
     })
-    .catch(err=>fatal(err.message));
-  }
-
-  function fatal(msg){document.getElementById('map').innerHTML=`<p style="color:#c33;padding:2rem;text-align:center">${msg}</p>`;}
-
-  function renderMap(us,stateData){
-    const mapEl=document.getElementById('map');
-    const svg=d3.select(mapEl).append('svg');
-    const width=mapEl.clientWidth, height=mapEl.clientHeight;
-    svg.attr('viewBox',`0 0 ${width} ${height}`);
-    const projection=d3.geoAlbersUsa().translate([width/2,height/2]).scale(width*1.25);
-    const path=d3.geoPath(projection);
-    const states=topojson.feature(us,us.objects.states).features;
-    const tooltip=document.getElementById('tooltip');
-
-    svg.on('click',()=>tooltip.style.display='none');
-    svg.selectAll('path').data(states).enter().append('path')
-      .attr('class','state')
-      .attr('d',path)
-      .on('click',(event,d)=>{
-        event.stopPropagation();
-        const entries=stateData.get(d.properties.name)||[];
-        tooltip.innerHTML=generateTooltipHTML(d.properties.name,entries);
-        positionTooltip(event,mapEl,tooltip);
-        tooltip.style.display='block';
-      });
-  }
-
-  function generateTooltipHTML(state,rows){
-    if(!rows.length) return `<h3>${state}</h3><p>No data available.</p>`;
-    let html=`<h3>${state}</h3>`;
-    rows.forEach(r=>{
-      html+=`<h4>${r.Year}</h4><strong>Total:</strong> ${Number(r.TotalPopulation).toLocaleString()}<div class=raceBar><div style=\"width:${r['White%']}%;background:#dfe6f9\"></div><div style=\"width:${r['Black%']}%;background:#a6bce5\"></div><div style=\"width:${r['Asian%']}%;background:#5f8dd3\"></div><div style=\"width:${r['Native%']}%;background:#2d5dbb\"></div><div style=\"width:${r['Hispanic%']}%;background:#173d99\"></div></div><div class=legend>W&nbsp;B&nbsp;A&nbsp;N&nbsp;H</div><strong>Culture:</strong> ${r.CulturalAffinities}`;
+    .on('click',(event,d)=>{
+      const state = d.properties.name;
+      const entry = stateData.get(state);
+      renderSidebar(state, entry);
     });
-    return html;
+}
+  
+function renderSidebar(state, data){
+  const el = document.getElementById("sidebar");
+  const insightBar = document.getElementById("insight-bar");
+  if (!data) {
+    el.innerHTML = `<h2>State: ${state}</h2><p>No data available.</p>`;
+    insightBar.innerHTML = "";
+    return;
   }
+  const pop = Number(data["Total Population"]).toLocaleString();
+  let html = `<h2>State: ${state}</h2>`;
 
-  function positionTooltip(evt,container,tip){
-    const [mx,my]=d3.pointer(evt,container);
-    // Wait a tick to ensure dimensions are known
-    requestAnimationFrame(()=>{
-      const tw=tip.offsetWidth, th=tip.offsetHeight;
-      let left=mx+18, top=my-th/2;
-      if(left+tw>container.clientWidth) left=mx-tw-18;
-      if(top<8) top=8; if(top+th>container.clientHeight-8) top=container.clientHeight-th-8;
-      tip.style.left=`${left}px`; tip.style.top=`${top}px`;
-    });
-  }
-})();
-</script>
+  const section = (label, content) => `<div class="data-field"><label>${label}</label><p>${content}</p></div>`;
+  const population = `<div class="data-field">
+    <label>Total Population</label>
+    <p>${pop || 'N/A'}</p>
+    <label style="margin-top:10px">Population Breakdown</label>
+    <div class="population-breakdown">
+      <p>White: ${data["% White"] || '-'}%</p>
+      <p>Hispanic: ${data["% Hispanic"] || '-'}%</p>
+      <p>African American: ${data["% African American"] || '-'}%</p>
+      <p>Asian: ${data["% Asian"] || '-'}%</p>
+    </div>
+  </div>`;
+
+  html += section("Race Type", data["Race Type"] || 'N/A');
+  html += section("Race Description", data["Race Description"] || 'N/A');
+  html += section("Narrative", data["Narrative"] || '');
+  html += population;
+  el.innerHTML = html;
+
+  const categories = [
+    ["Top Shows", data["Top Shows"]],
+    ["Top Channels", data["Top Channels"]],
+    ["Top Mobile Apps", data["Top Mobile Apps"]],
+    ["Top Location Visits", data["Top Location Visits"]],
+    ["Top Segments", data["Top Segments"]]
+  ];
+
+  insightBar.innerHTML = categories.map(([label, items]) => {
+    if (!items?.length) return '';
+    return `<div class='insight-card'>
+      <h4>${label}</h4>
+      ${items.map(i => `<div class='insight-entry'><span>${i.Name}</span><span>${i.Data}</span></div>`).join('')}
+    </div>`;
+  }).join('');
+}
+  
+    function fatal(msg){
+      document.getElementById('map').innerHTML = `<p style='color:#c33;padding:2rem;text-align:center'>${msg}</p>`;
+    }
+  })();
+  </script>
 </body>
 </html>
