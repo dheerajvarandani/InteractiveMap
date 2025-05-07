@@ -254,6 +254,21 @@
     #loginBox{background:#fff;padding:2rem 3rem;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.55);width:340px;text-align:center;color:#000;font-family:'Avenir','Avenir Next',sans-serif;}
     #loginBox input{width:100%;padding:.8rem;font-size:1rem;border:1px solid #ccc;border-radius:8px;margin:1rem 0}
     #loginBox button{width:100%;padding:.8rem;font-size:1rem;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;font-weight:700;font-family:'Avenir','Avenir Next',sans-serif;}
+  
+
+    /* On small screens, stack vertically */
+@media (max-width: 768px) {
+  #mapWrapper {
+    flex-direction: column;
+  }
+
+  #map,
+  #sidebar {
+    width: 100%;
+  }
+}
+  
+  
   </style>
 </head>
 <body>
