@@ -68,13 +68,14 @@
 }
 
 #insight-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   gap: 1rem;
-  justify-content: space-between;
-  margin-top: 1rem;
-  padding: 1rem 6vw;
-  overflow-x: auto;
+  /*margin-top: 1rem;*/
+  padding:0 2.5rem 2.5rem 6vw;
 }
+
+
 .insight-card {
   flex: 1 1 20%;
   min-width: 220px;
@@ -149,7 +150,7 @@
   border-bottom: none;
 }
 .population-breakdown {
-  padding-left: 15px;
+  /*padding-left: 15px;*/
   color: #bbb;
 }
     .background-layer {
@@ -207,7 +208,7 @@
     a{color:var(--accent);text-decoration:none}
     h1,h2,h3,h4{font-weight:300;font-family:'Avenir','Avenir Next',sans-serif;}
     h2{color:var(--accent);margin-bottom:.5rem}
-    section{padding:3.5rem 6vw;max-width:1200px;margin:auto;font-family:'Avenir','Avenir Next',sans-serif;}
+    section{padding:0 3.5rem 3.5rem 6vw;max-width:1200px;margin:auto;font-family:'Avenir','Avenir Next',sans-serif;}
 
     #logo{
       height:42px;
@@ -267,6 +268,12 @@
     width: 100%;
   }
 }
+
+@media (max-width: 900px) {
+  #insight-bar {
+    grid-template-columns: 1fr;
+  }
+}
   
   
   </style>
@@ -296,8 +303,9 @@
     <div id="map"></div>
     <div id="sidebar" class="sidebar"></div>
   </div>
-  <div id="insight-bar"></div>
+  
 </section>
+<div id="insight-bar"></div>
 
 
 <!-- Wrapped content below map -->
@@ -316,7 +324,7 @@
         <p>CTV Ad Solutions for a Diverse Mass Market. Sabio is a leading CTV advertising platform built to help brands reach, engage, and validate (REV) streaming audiences.</p>
       </div>
       <div class="info-card">
-        <!--img src="logo-placeholder.png" alt="CTV Icon" class="card-icon"-->
+        <img src="./assets/tv-icon.png" alt="CTV Icon" class="card-icon">
         <h3>CTV Advertising</h3>
         <p>CTV delivers internet-based streaming content on Smart TVs and offers advanced ad targeting. With $30B in ad spend in 2024, it's set to surpass linear TV by 2026.</p>
       </div>
@@ -326,6 +334,10 @@
   <section id="data-sources">
     <h2>Data Sources</h2>
     <p class="textBlock">This site was built using a combination of publicly available data and proprietary data provided by Sabio and App Science. Data marked as Census was taken from the 2023 American Community Survey (ACS). The majority of all other insights come from App Science’s measurement and audience graph.</p>
+  </section>
+
+  <section id="data-scoring">
+    <h2>Data Scoring</h2>
   </section>
 
 
@@ -390,6 +402,8 @@
     });
 
     renderMap(us, stateData);
+    renderSidebar('Select a State', null); // <- Ensures visible UI on load
+
   })
   .catch(err=>fatal(err.message));
 }
@@ -432,52 +446,52 @@
     });
 }
   
-function renderSidebar(state, data){
+function renderSidebar(state, data) {
   const el = document.getElementById("sidebar");
   const insightBar = document.getElementById("insight-bar");
-  if (!data) {
-    el.innerHTML = `<h2>State: ${state}</h2><p>No data available.</p>`;
-    insightBar.innerHTML = "";
-    return;
-  }
-  const pop = Number(data["Total Population"]).toLocaleString();
-  let html = `<h2>State: ${state}</h2>`;
 
-  const section = (label, content) => `<div class="data-field"><label>${label}</label><p>${content}</p></div>`;
+  const displayValue = (val, suffix = '') => val ? `${val}${suffix}` : '-';
+
+  let html = `<h2>State: ${state || 'Select a state'}</h2>`;
+  const section = (label, content) => content ? `<div class="data-field"><label>${label}</label><p>${content}</p></div>` : '';
+
   const population = `<div class="data-field">
     <label>Total Population</label>
-    <p>${pop || 'N/A'}</p>
-    <label style="margin-top:10px">Population Breakdown</label>
+    <p>${data?.["Total Population"] ? Number(data["Total Population"]).toLocaleString() : '-'}</p><br>
     <div class="population-breakdown">
-      <p>White: ${data["% White"] || '-'}%</p>
-      <p>Hispanic: ${data["% Hispanic"] || '-'}%</p>
-      <p>African American: ${data["% African American"] || '-'}%</p>
-      <p>Asian: ${data["% Asian"] || '-'}%</p>
+      <label>Population Breakdown</label>
+      <p>White: ${displayValue(data?.["% White"], '%')}</p>
+      <p>Hispanic: ${displayValue(data?.["% Hispanic"], '%')}</p>
+      <p>African American: ${displayValue(data?.["% African American"], '%')}</p>
+      <p>Asian: ${displayValue(data?.["% Asian"], '%')}</p>
     </div>
   </div>`;
 
-  html += section("Race Type", data["Race Type"] || 'N/A');
-  html += section("Race Description", data["Race Description"] || 'N/A');
-  html += section("Narrative", data["Narrative"] || '');
+  html += section("", displayValue(data?.["Race Type"]));
+  html += section("", displayValue(data?.["Race Description"]));
+  html += section("", displayValue(data?.["Narrative"]));
   html += population;
   el.innerHTML = html;
 
   const categories = [
-    ["Top Shows", data["Top Shows"]],
-    ["Top Channels", data["Top Channels"]],
-    ["Top Mobile Apps", data["Top Mobile Apps"]],
-    ["Top Location Visits", data["Top Location Visits"]],
-    ["Top Segments", data["Top Segments"]]
+    ["Top Shows", data?.["Top Shows"]],
+    ["Top Channels", data?.["Top Channels"]],
+    ["Top Mobile Apps", data?.["Top Mobile Apps"]],
+    ["Top Location Visits", data?.["Top Location Visits"]],
+    ["Top Segments", data?.["Top Segments"]]
   ];
 
   insightBar.innerHTML = categories.map(([label, items]) => {
-    if (!items?.length) return '';
+    const rows = (items || []).length ?
+      items.map(i => `<div class='insight-entry'><span>${i.Name}</span><span>${i.Data}</span></div>`).join('') :
+      `<div class='insight-entry'><span>-</span><span>-</span></div>`;
     return `<div class='insight-card'>
       <h4>${label}</h4>
-      ${items.map(i => `<div class='insight-entry'><span>${i.Name}</span><span>${i.Data}</span></div>`).join('')}
+      ${rows}
     </div>`;
   }).join('');
 }
+
   
     function fatal(msg){
       document.getElementById('map').innerHTML = `<p style='color:#c33;padding:2rem;text-align:center'>${msg}</p>`;
