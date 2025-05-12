@@ -482,11 +482,12 @@ function renderSidebar(state, data) {
   el.innerHTML = html;
 
   const categories = [
+    ["Top Segments", data?.["Top Segments"]],
     ["Top Shows", data?.["Top Shows"]],
     ["Top Channels", data?.["Top Channels"]],
     ["Top Mobile Apps", data?.["Top Mobile Apps"]],
-    ["Top Location Visits", data?.["Top Location Visits"]],
-    ["Top Segments", data?.["Top Segments"]]
+    ["Top Location Visits", data?.["Top Location Visits"]]
+   
   ];
 
   insightBar.innerHTML = categories.map(([label, items]) => {
