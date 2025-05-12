@@ -392,6 +392,7 @@
         "Total Population": row[4],
         "% White": row[5], "% Hispanic": row[6], "% Asian": row[7], "% African American": row[8],
         "Narrative": row[9],
+        "Eligible Voter": row[55], 
         "Top Shows": extractTop(row, 'Top Shows', 10),
         "Top Channels": extractTop(row, 'Top Channels', 19),
         "Top Mobile Apps": extractTop(row, 'Top Mobile Apps', 28),
@@ -458,14 +459,21 @@ function renderSidebar(state, data) {
   const population = `<div class="data-field">
     <label>Total Population</label>
     <p>${data?.["Total Population"] ? Number(data["Total Population"]).toLocaleString() : '-'}</p><br>
+
+      <div class="data-field">
+    <label>Eligible Voter</label>
+    <p>${displayValue(data?.["Eligible Voter"], '%')}</p>
+  </div>
+
     <div class="population-breakdown">
-      <label>Population Breakdown</label>
+          <label>Total Population Breakdown</label>
       <p>White: ${displayValue(data?.["% White"], '%')}</p>
       <p>Hispanic: ${displayValue(data?.["% Hispanic"], '%')}</p>
       <p>African American: ${displayValue(data?.["% African American"], '%')}</p>
       <p>Asian: ${displayValue(data?.["% Asian"], '%')}</p>
     </div>
-  </div>`;
+  </div>
+`;
 
   html += section("", displayValue(data?.["Race Type"]));
   html += section("", displayValue(data?.["Race Description"]));
