@@ -338,6 +338,7 @@
 
   <section id="data-scoring">
     <h2>Data Scoring</h2>
+    <p class="textBlock">Propensity Score is a measure used to evaluate how closely a particular attribute aligns with, or relates to, the general market population. Propensity Scores less than 100 are less likely to relate to an attribute compared to the general market while Propensity Scores greater than 100 mean the audience is more likely to relate to that attribute compared to the general market.</p>
   </section>
 
 
@@ -461,7 +462,7 @@ function renderSidebar(state, data) {
     <p>${data?.["Total Population"] ? Number(data["Total Population"]).toLocaleString() : '-'}</p><br>
 
       <div class="data-field">
-    <label>Eligible Voter</label>
+    <label>Eligible Voter %</label>
     <p>${displayValue(data?.["Eligible Voter"], '%')}</p>
   </div>
 
